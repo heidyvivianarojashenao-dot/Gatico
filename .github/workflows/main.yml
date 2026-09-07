@@ -1,0 +1,53 @@
+name: Construir APK GATO
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar proyecto
+        uses: actions/checkout@v4
+
+      - name: Instalar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Instalar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar SDK Android 36
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Buscar ZIP del proyecto
+        run: |
+          ZIP=$(find . -maxdepth 1 -type f -name "*.zip" | head -n 1)
+          if [ -z "$ZIP" ]; then
+            echo "No se encontró el ZIP del proyecto."
+            exit 1
+          fi
+          echo "ZIP encontrado: $ZIP"
+          mkdir botanas_project
+          unzip -q "$ZIP" -d botanas_project
+
+      - name: Instalar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Construir APK
+        run: |
+          cd botanas_project
+          gradle assembleDebug --no-daemon
+
+      - name: Guardar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GATO-APK
+          path: botanas_project/app/build/outputs/apk/debug/app-debug.apk
